@@ -190,7 +190,16 @@
               <option>Ala Carte — Slow Bar</option>
             </select>
           </div>
-          <div class="field"><label>Segment</label><input id="f-segment" placeholder="e.g. Beginner Explorer" oninput="saveField('segment',this.value)"></div>
+          <div class="field">
+            <label>Segment</label>
+            <select id="f-segment" onchange="saveField('segment',this.value)">
+              <option value="">Select segment…</option>
+              <option>Casual Drinker</option>
+              <option>Beginner Explorer</option>
+              <option>Coffee Enthusiast</option>
+              <option>VIC/Prosumer</option>
+            </select>
+          </div>
           <div class="field"><label>Version</label><input id="f-version" placeholder="v1" oninput="saveField('version',this.value)"></div>
         </div>
 
@@ -208,9 +217,28 @@
         <div id="ingredients-rows" class="repeat-rows"></div>
         <button class="add-row-btn" onclick="addRow('ingredients',{amount:'',name:'',notes:''})">+ Add ingredient</button>
 
-        <div class="section-header">Method</div>
+        <div class="section-header">Components</div>
         <div id="method-rows" class="repeat-rows"></div>
-        <button class="add-row-btn" onclick="addRow('method',{title:'',instruction:''})">+ Add step</button>
+        <button class="add-row-btn" onclick="addRow('method',{title:'',instruction:''})">+ Add component</button>
+        <div style="margin-top:14px;margin-bottom:4px"><span style="font-size:9px;font-weight:700;letter-spacing:0.1em;color:var(--salmon);text-transform:uppercase">Component Photos</span> <span style="font-size:9px;color:var(--mid);font-style:italic">Optional — up to 2</span></div>
+        <div class="grid-2" style="margin-bottom:8px">
+          <div>
+            <label class="img-upload" id="lbl-comp-1">
+              <input type="file" accept="image/*" style="display:none" onchange="handlePhoto(event,'componentPhoto1','lbl-comp-1','img-comp-1')">
+              <div class="img-placeholder" id="ph-comp-1"><div class="plus">+</div><div class="hint">Component photo 1</div></div>
+              <img id="img-comp-1" class="img-preview" style="display:none">
+            </label>
+            <button class="remove-photo" id="rm-comp-1" style="display:none" onclick="removePhoto('componentPhoto1','lbl-comp-1','img-comp-1','ph-comp-1','rm-comp-1')">Remove</button>
+          </div>
+          <div>
+            <label class="img-upload" id="lbl-comp-2">
+              <input type="file" accept="image/*" style="display:none" onchange="handlePhoto(event,'componentPhoto2','lbl-comp-2','img-comp-2')">
+              <div class="img-placeholder" id="ph-comp-2"><div class="plus">+</div><div class="hint">Component photo 2</div></div>
+              <img id="img-comp-2" class="img-preview" style="display:none">
+            </label>
+            <button class="remove-photo" id="rm-comp-2" style="display:none" onclick="removePhoto('componentPhoto2','lbl-comp-2','img-comp-2','ph-comp-2','rm-comp-2')">Remove</button>
+          </div>
+        </div>
 
         <div class="section-header">Service Build</div>
         <div style="font-size:11px;color:var(--mid);font-style:italic;margin-bottom:8px">Max 6 steps. If more than 6, the build is too complex for Fast Bar.</div>
@@ -276,6 +304,7 @@ let currentId = null;
 
 const ALLERGENS = ['milk','cream','soy','nuts','gluten','eggs','others'];
 const TRACKS = ['Classics — Fast Bar','Non-coffee — Fast Bar','Signature — Fast Bar','RTDs — Fast Bar','Tasting Menu — Slow Bar','Ala Carte — Slow Bar'];
+const SEGMENTS = ['Casual Drinker','Beginner Explorer','Coffee Enthusiast','VIC/Prosumer'];
 
 function emptyCard() {
   return {
@@ -287,6 +316,7 @@ function emptyCard() {
     ingredients: [{amount:'',name:'',notes:''},{amount:'',name:'',notes:''}],
     method: [{title:'',instruction:''},{title:'',instruction:''}],
     serviceBuild: [{step:''},{step:''}],
+    componentPhoto1: '', componentPhoto2: '',
     dineInPhoto: '', takeOutPhoto: '',
     glasswareDineIn: '', glasswareTakeOut: '', cupSize: '',
     servingInstructions: '', drinkingInstructions: '',
@@ -369,6 +399,15 @@ function populateForm() {
   document.getElementById('f-name').value = c.drinkName || '';
   document.getElementById('f-track').value = c.track || '';
   document.getElementById('f-segment').value = c.segment || '';
+  // Component photos
+  ['componentPhoto1','componentPhoto2'].forEach((key,idx) => {
+    const n = idx+1;
+    const img = document.getElementById(`img-comp-${n}`);
+    const ph  = document.getElementById(`ph-comp-${n}`);
+    const rm  = document.getElementById(`rm-comp-${n}`);
+    if (c[key]) { img.src=c[key]; img.style.display='block'; ph.style.display='none'; rm.style.display='block'; }
+    else { img.style.display='none'; ph.style.display='flex'; rm.style.display='none'; }
+  });
   document.getElementById('f-version').value = c.version || 'v1';
   document.getElementById('f-intro').value = c.introduction || '';
   document.getElementById('f-flavour').value = c.flavourProfile || '';
@@ -490,9 +529,13 @@ function handlePhoto(event, field, lblId, imgId) {
     const c = getCard(); if (!c) return;
     c[field] = e.target.result; saveCards();
     const img = document.getElementById(imgId);
-    const ph  = document.getElementById(lblId === 'lbl-dine-in' ? 'ph-dine-in' : 'ph-take-out');
-    const rm  = document.getElementById(lblId === 'lbl-dine-in' ? 'rm-dine-in' : 'rm-take-out');
-    img.src = e.target.result; img.style.display='block'; ph.style.display='none'; rm.style.display='block';
+    // derive ph and rm ids from lblId: lbl-dine-in → ph-dine-in, rm-dine-in etc.
+    const suffix = lblId.replace(/^lbl-/, '');
+    const ph = document.getElementById('ph-' + suffix);
+    const rm = document.getElementById('rm-' + suffix);
+    img.src = e.target.result; img.style.display='block';
+    if (ph) ph.style.display='none';
+    if (rm) rm.style.display='block';
   };
   reader.readAsDataURL(file);
 }
@@ -523,6 +566,7 @@ function renderPreview() {
   const sec = (title,content) => content ? `<div class="preview-section"><div class="preview-section-title">${title}</div>${content}</div>` : '';
   const ings = c.ingredients.filter(r=>r.name).map(r=>`<div class="ing-row"><span class="ing-amt">${esc(r.amount)}</span><span class="ing-name">${esc(r.name)}</span>${r.notes?`<span class="ing-note">${esc(r.notes)}</span>`:''}</div>`).join('');
   const steps = c.method.filter(r=>r.instruction).map((r,i)=>`<div class="step-row"><span class="step-num">${i+1}</span><div>${r.title?`<span class="step-title">${esc(r.title)}</span>`:''}<span class="step-text">${esc(r.instruction)}</span></div></div>`).join('');
+  const compPhotos = (c.componentPhoto1||c.componentPhoto2) ? `<div class="photo-pair" style="margin-top:10px">${c.componentPhoto1?`<div><div class="preview-label">Component Photo 1</div><img src="${c.componentPhoto1}"></div>`:''} ${c.componentPhoto2?`<div><div class="preview-label">Component Photo 2</div><img src="${c.componentPhoto2}"></div>`:''}</div>` : '';
   const svc = c.serviceBuild.filter(r=>r.step).map((r,i)=>`<div class="step-row"><span class="step-num">${i+1}</span><span class="step-text">${esc(r.step)}</span></div>`).join('');
   const faqs = c.faq.filter(r=>r.question).map(r=>`<div class="faq-item"><div class="faq-q">Q: ${esc(r.question)}</div><div class="faq-a">A: ${esc(r.answer)}</div></div>`).join('');
 
@@ -550,7 +594,7 @@ function renderPreview() {
       ${sec('Introduction',c.introduction?`<p class="preview-text">${esc(c.introduction)}</p>`:'')}
       ${sec('Tasting Notes',tasting)}
       ${sec('Ingredients',ings)}
-      ${sec('Method',steps)}
+      ${sec('Components', steps + compPhotos)}
       ${sec('Service Build',svc)}
       ${presentationContent?`<div class="preview-section"><div class="preview-section-title">Presentation</div>${presentationContent}</div>`:''}
       ${allergenAndGuest}
