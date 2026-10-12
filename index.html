@@ -219,7 +219,7 @@
 
         <div class="section-header">Components</div>
         <div id="method-rows" class="repeat-rows"></div>
-        <button class="add-row-btn" onclick="addRow('method',{title:'',instruction:''})">+ Add component</button>
+        <button class="add-row-btn" onclick="addRow('method',{title:'',instruction:'',yield:'',prepTime:'',shelfLife:''})">+ Add component</button>
         <div style="margin-top:14px;margin-bottom:4px"><span style="font-size:9px;font-weight:700;letter-spacing:0.1em;color:var(--salmon);text-transform:uppercase">Component Photos</span> <span style="font-size:9px;color:var(--mid);font-style:italic">Optional — up to 2</span></div>
         <div class="grid-2" style="margin-bottom:8px">
           <div>
@@ -314,7 +314,7 @@ function emptyCard() {
     allergens: {milk:false,cream:false,soy:false,nuts:false,gluten:false,eggs:false,others:false},
     allergensOthersText: '',
     ingredients: [{amount:'',name:'',notes:''},{amount:'',name:'',notes:''}],
-    method: [{title:'',instruction:''},{title:'',instruction:''}],
+    method: [{title:'',instruction:'',yield:'',prepTime:'',shelfLife:''},{title:'',instruction:'',yield:'',prepTime:'',shelfLife:''}],
     serviceBuild: [{step:''},{step:''}],
     componentPhoto1: '', componentPhoto2: '',
     dineInPhoto: '', takeOutPhoto: '',
@@ -484,9 +484,30 @@ function renderRows(type, rows) {
         <input style="flex:2" placeholder="Ingredient name" value="${esc(row.name)}" oninput="updateRow('ingredients',${i},'name',this.value)">
         <input style="flex:1" placeholder="Notes (optional)" value="${esc(row.notes)}" oninput="updateRow('ingredients',${i},'notes',this.value)">`;
     } else if (type === 'method') {
-      div.innerHTML += `
-        <input style="flex:1" placeholder="Step title" value="${esc(row.title)}" oninput="updateRow('method',${i},'title',this.value)">
-        <textarea style="flex:2.5" rows="2" placeholder="Detailed instruction..." oninput="updateRow('method',${i},'instruction',this.value)">${esc(row.instruction)}</textarea>`;
+      div.style.flexDirection = 'column';
+      div.style.alignItems = 'stretch';
+      div.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
+        <span class="row-num" style="padding-top:10px">${i+1}</span>
+        <input style="flex:1" placeholder="Component name / title" value="${esc(row.title)}" oninput="updateRow('method',${i},'title',this.value)">
+        <textarea style="flex:2.5" rows="2" placeholder="Description, process, or recipe..." oninput="updateRow('method',${i},'instruction',this.value)">${esc(row.instruction)}</textarea>
+        <button class="remove-btn" onclick="removeRow('method',${i})" style="padding-top:6px">×</button>
+      </div>
+      <div style="display:flex;gap:8px;padding-left:26px;margin-bottom:4px">
+        <div style="flex:1">
+          <div style="font-size:8.5px;color:var(--salmon);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px">Yield</div>
+          <input placeholder="e.g. 750ml per 1L milk" value="${esc(row.yield||'')}" oninput="updateRow('method',${i},'yield',this.value)" style="width:100%">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:8.5px;color:var(--salmon);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px">Prep Time</div>
+          <input placeholder="e.g. 45 min" value="${esc(row.prepTime||'')}" oninput="updateRow('method',${i},'prepTime',this.value)" style="width:100%">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:8.5px;color:var(--salmon);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px">Shelf Life</div>
+          <input placeholder="e.g. 5 days refrigerated" value="${esc(row.shelfLife||'')}" oninput="updateRow('method',${i},'shelfLife',this.value)" style="width:100%">
+        </div>
+      </div>`;
+      container.appendChild(div);
+      return;
     } else if (type === 'service') {
       div.innerHTML += `<textarea style="flex:1" rows="2" placeholder="e.g. Pull 120ml from tap over ice" oninput="updateRow('serviceBuild',${i},'step',this.value)">${esc(row.step)}</textarea>`;
     } else if (type === 'faq') {
@@ -565,7 +586,18 @@ function renderPreview() {
 
   const sec = (title,content) => content ? `<div class="preview-section"><div class="preview-section-title">${title}</div>${content}</div>` : '';
   const ings = c.ingredients.filter(r=>r.name).map(r=>`<div class="ing-row"><span class="ing-amt">${esc(r.amount)}</span><span class="ing-name">${esc(r.name)}</span>${r.notes?`<span class="ing-note">${esc(r.notes)}</span>`:''}</div>`).join('');
-  const steps = c.method.filter(r=>r.instruction).map((r,i)=>`<div class="step-row"><span class="step-num">${i+1}</span><div>${r.title?`<span class="step-title">${esc(r.title)}</span>`:''}<span class="step-text">${esc(r.instruction)}</span></div></div>`).join('');
+  const steps = c.method.filter(r=>r.instruction||r.title).map((r,i)=>`
+    <div class="step-row" style="flex-direction:column;align-items:stretch;margin-bottom:14px">
+      <div style="display:flex;gap:12px;margin-bottom:6px">
+        <span class="step-num">${i+1}</span>
+        <div>${r.title?`<span class="step-title">${esc(r.title)}</span>`:''}<span class="step-text">${esc(r.instruction)}</span></div>
+      </div>
+      ${(r.yield||r.prepTime||r.shelfLife)?`<div style="display:flex;gap:16px;padding-left:30px;flex-wrap:wrap">
+        ${r.yield?`<div><div class="preview-label">Yield</div><div class="preview-value">${esc(r.yield)}</div></div>`:''}
+        ${r.prepTime?`<div><div class="preview-label">Prep Time</div><div class="preview-value">${esc(r.prepTime)}</div></div>`:''}
+        ${r.shelfLife?`<div><div class="preview-label">Shelf Life</div><div class="preview-value">${esc(r.shelfLife)}</div></div>`:''}
+      </div>`:''}
+    </div>`).join('');
   const compPhotos = (c.componentPhoto1||c.componentPhoto2) ? `<div class="photo-pair" style="margin-top:10px">${c.componentPhoto1?`<div><div class="preview-label">Component Photo 1</div><img src="${c.componentPhoto1}"></div>`:''} ${c.componentPhoto2?`<div><div class="preview-label">Component Photo 2</div><img src="${c.componentPhoto2}"></div>`:''}</div>` : '';
   const svc = c.serviceBuild.filter(r=>r.step).map((r,i)=>`<div class="step-row"><span class="step-num">${i+1}</span><span class="step-text">${esc(r.step)}</span></div>`).join('');
   const faqs = c.faq.filter(r=>r.question).map(r=>`<div class="faq-item"><div class="faq-q">Q: ${esc(r.question)}</div><div class="faq-a">A: ${esc(r.answer)}</div></div>`).join('');
